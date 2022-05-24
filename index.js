@@ -1,10 +1,18 @@
+require('dotenv').config();
+
+
 // import express framework
 const express = require("express");
+const mongoose = require("mongoose");
 const req = require("express/lib/request");
 const res = require("express/lib/response");
 
 //import our database
 const database = require("./database/index");
+
+
+//establishing connection with mongodb
+mongoose.connect(process.env.MONGO_URL).then(() => console.log("connection established"))
 
 //initilizing
 const Bloom = express();
