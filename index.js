@@ -11,6 +11,14 @@ const res = require("express/lib/response");
 const database = require("./database/index");
 
 
+//models
+const bookModels = require("./database/book");
+const authorModels = require("./database/author");
+const publicationModels = require("./database/publication");
+const bookModel = require('./database/book');
+
+
+
 //establishing connection with mongodb
 mongoose.connect(process.env.MONGO_URL).then(() => console.log("connection established"))
 
@@ -26,8 +34,9 @@ Access          PUBLIC
 Parameters      NONE
 Method          GET
 */
-Bloom.get("/",(req,res) => {
-    return res.json({books: database.books});
+Bloom.get("/",async (req,res) => {  
+    const getAllBooks = await bookModel.find();
+    return res.json({getAllBooks });//database.books     ---just using the database we created as a file
 });
 
 /*
@@ -37,8 +46,15 @@ Access          PUBLIC
 Parameters      isbn
 Method          GET
 */
-Bloom.get("/is/:isbn", (req,res) =>{
-    const getSpecificBook = database.books.filter(
+Bloom.get("/is/:isbn",async (req,res) =>{
+    const getSpecificBook = await bookModel.findOne({ISBN:req.params.isbn})
+    //mongoose will return null value if nothing is there
+    if(!getSpecificBook){
+        return res.json({error: `No book found for ISBN:${req.params.isbn}`});
+    }
+
+    return res.json({book: getSpecificBook})
+ /*   const getSpecificBook =  database.books.filter(
         (book) => book.ISBN === req.params.isbn
     );
 
@@ -46,7 +62,7 @@ Bloom.get("/is/:isbn", (req,res) =>{
         return res.json({error: `No book found for ISBN:${req.params.isbn}`});
     }
 
-    return res.json({book: getSpecificBook})
+    return res.json({book: getSpecificBook})          --------this code using our databse created file*/ 
 });
 
 
@@ -58,8 +74,17 @@ Parameters      category
 Method          GET
 */
 
-Bloom.get("/c/:category", (req,res) => {
-    const getSpecificBooks = database.books.filter(
+Bloom.get("/c/:category",async (req,res) => {
+    const getSpecificBooks = await bookModel.findOne({
+        category: req.params.category
+    });
+
+    if(!getSpecificBooks){
+        return res.json({error: `No book found for category of:${req.params.category}`});
+    }
+
+    return res.json({book: getSpecificBooks}) 
+    /*const getSpecificBooks = database.books.filter(
         (book) => book.category.includes(req.params.category)
     );
 
@@ -67,7 +92,7 @@ Bloom.get("/c/:category", (req,res) => {
         return res.json({error: `No book found for category of:${req.params.category}`});
     }
 
-    return res.json({book: getSpecificBooks})    
+    return res.json({book: getSpecificBooks})   */ 
 });
 
 
@@ -106,8 +131,11 @@ Access          PUBLIC
 Parameters      NONE
 Method          GET
 */
-Bloom.get("/authors",(req,res) => {
-    return res.json({authors: database.authors});
+Bloom.get("/authors",async (req,res) => {
+    const getAllAuthors = await authorModels.find();
+    return res.json({getAllAuthors });
+
+    //return res.json({authors: database.authors});
 });
 
 
@@ -157,8 +185,11 @@ Access          PUBLIC
 Parameters      NONE
 Method          GET
 */
-Bloom.get("/publications",(req,res) => {
-    return res.json({publications: database.publications});
+Bloom.get("/publications",async(req,res) => {
+    const getAllPublications = await publicationModels.find();
+    return res.json({getAllPublications });
+    
+    //return res.json({publications: database.publications});
 });
 
 
@@ -213,10 +244,13 @@ Parameters      NONE
 Method          POST
 */
 //using POSTMAN
-Bloom.post("/book/new", (req,res) => {
-      const {newBook} = req.body;
+Bloom.post("/book/new",async (req,res) => {
+    const {newBook} = req.body;
+    const addNewBook = bookModels.create(newBook);
+    return res.json({ books: addNewBook, message:"book added "});
+      /*const {newBook} = req.body;
       database.books.push(newBook);
-      return res.json({ books: database.books, message:"book added "});
+      return res.json({ books: database.books, message:"book added "});  -------------using our db"*/
 });
 
 
@@ -228,10 +262,13 @@ Parameters      NONE
 Method          POST
 */
 //using POSTMAN
-Bloom.post("/author/new", (req,res) => {
+Bloom.post("/author/new",async (req,res) => {
     const {newAuthor} = req.body;
+    const addNewAuthor = authorModels.create(newAuthor);
+    return res.json({ Authors: addNewAuthor, message:"Author added "});
+   /* const {newAuthor} = req.body;
     database.authors.push(newAuthor);
-    return res.json({authors: database.authors, message:"author added"})
+    return res.json({authors: database.authors, message:"author added"})*/
 });
 
 
@@ -245,10 +282,13 @@ Parameters      NONE
 Method          POST
 */
 //using POSTMAN
-Bloom.post("/publication/new", (req,res) => {
+Bloom.post("/publication/new",async  (req,res) => {
     const {newPublication} = req.body;
+    const addNewPublication = publicationModels.create(newPublication);
+    return res.json({ Publications: addNewPublication, message:"Publication added "});
+   /* const {newPublication} = req.body;
     database.publications.push(newPublication);
-    return res.json({publications: database.publications, message:"publication added"})
+    return res.json({publications: database.publications, message:"publication added"})*/
 });
 
 
@@ -263,15 +303,28 @@ Parameters      isbn
 Method          PUT
 */
 //using POSTMAN
-Bloom.put("/book/update/:isbn", (req,res) => {
-    database.books.forEach((book) => {
+Bloom.put("/book/update/:isbn",async (req,res) => {
+    const updatedBook = await bookModels.findOneAndUpdate(
+        {
+            ISBN: req.params.isbn
+        },{
+            title: req.body.bookTitle
+        },{
+            new: true
+        }
+    );
+
+    return res.json({books: updatedBook});
+   
+   
+    /* database.books.forEach((book) => {
         if(book.ISBN === req.params.isbn){
             book.title = req.body.bookTitle;
             return;
         }
     });
 
-    return res.json({books: database.books});
+    return res.json({books: database.books});*/
 });
 
 
@@ -283,21 +336,44 @@ Parameters      isbn
 Method          PUT
 */
 //using POSTMAN
-Bloom.put("/book/author/update/:isbn", (req,res) =>{
+Bloom.put("/book/author/update/:isbn",async (req,res) =>{
     //update book database
-    database.books.forEach((book) => {
+    const updatedBook = await bookModels.findOneAndUpdate(
+        {
+            ISBN: req.params.isbn
+        },{
+            $addToSet:{
+                authors: req.body.newAuthor
+            }
+        },{
+            new: true
+        }
+    );
+    /*database.books.forEach((book) => {
         if(book.ISBN === req.params.isbn){
             return book.authors.push(req.body.newAuthor);
         }
          
-    });
+    });*/
     //update author database
-    database.authors.forEach((author) => {
+    const updatedAuthor = await authorModels.findOneAndUpdate(
+        {
+            id: req.body.newAuthor
+        },{
+            $addToSet:{
+                books: req.params.isbn
+            }
+        },{
+            new: true
+        }
+    );
+   /* database.authors.forEach((author) => {
         if(author.id === req.body.newAuthor){
             return author.books.push(req.params.isbn);
         }
     })
-    return res.json({books: database.books,authors:database.authors,message: "book and authors added"})
+    return res.json({books: database.books,authors:database.authors,message: "book and authors added"})*/
+    return res.json({books: updatedBook,authors:updatedAuthor,message: "book and authors added"})
 });
 
 
@@ -313,13 +389,20 @@ Parameters      isbn
 Method          DELETE
 */
 
-Bloom.delete("/book/delete/:isbn",(req,res) => {
-    const updatedBookDatabase = database.books.filter(
+Bloom.delete("/book/delete/:isbn",async (req,res) => {
+    const deleteBook =await bookModels.findOneAndDelete(
+        {
+            ISBN: req.params.isbn
+        }
+    );
+
+  /*  const updatedBookDatabase = database.books.filter(
         (book) => book.ISBN !== req.params.isbn
     );
     //here we need to change the database to let insetad of const
     database.books = updatedBookDatabase;
-    return res.json({books: database.books});
+    return res.json({books: database.books});*/
+    return res.json({books: deleteBook});
 });
 
 
@@ -331,9 +414,20 @@ Access          PUBLIC
 Parameters      isbn/author
 Method          DELETE
 */
-Bloom.delete("/book/delete/author/:isbn/:authorId",(req,res) => {
+Bloom.delete("/book/delete/author/:isbn/:authorId",async(req,res) => {
     //update book database
-    database.books.forEach((book) =>{
+    const updatedBook = await bookModels.findOneAndUpdate(
+        {
+            ISBN: req.params.isbn
+        },{
+            $pull:{
+                authors: parseInt(req.params.authorId)
+            }
+        },{
+            new:true
+        }
+    );
+    /*database.books.forEach((book) =>{
         if(book.ISBN === req.params.isbn){
             const newAuthorList = book.authors.filter(
                 (author)  => author !== parseInt(req.params.authorId)
@@ -341,11 +435,23 @@ Bloom.delete("/book/delete/author/:isbn/:authorId",(req,res) => {
             book.authors = newAuthorList;
             return;
         }
-    });
+    });*/
 
 
     //update author database
-    database.authors.forEach((author) =>{
+    const updatedAuthor = await authorModels.findOneAndUpdate(
+        {
+            id: parseInt(req.params.authorId)
+        },{
+            $pull:{
+                books: req.params.isbn
+            }
+        },{
+            new:true
+        }
+    );
+    
+   /* database.authors.forEach((author) =>{
         if(author.id === parseInt(req.params.authorId)){
             const newBooksList = author.books.filter(
                 (book) => book !== req.params.isbn
@@ -354,9 +460,10 @@ Bloom.delete("/book/delete/author/:isbn/:authorId",(req,res) => {
             author.books = newBooksList;
             return;
         }
-    });
+    });*/
 
-    return res.json({books:database.books,authors:database.authors, message:"author deleted"});
+   // return res.json({books:database.books,authors:database.authors, message:"author deleted"});
+   return res.json({books:updatedBook,authors:updatedAuthor, message:"author deleted"});
 });
 
 
